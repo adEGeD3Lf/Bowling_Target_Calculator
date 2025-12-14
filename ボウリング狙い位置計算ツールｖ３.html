@@ -1,0 +1,1273 @@
+
+
+
+
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ボウリング軌道計算ツール</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f0ebe0;
+            min-height: 100vh;
+            padding: 5px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .container {
+            background: transparent;
+            border-radius: 0;
+            padding: 0;
+            max-width: 100%;
+            width: 100%;
+            box-shadow: none;
+        }
+
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        .input-section {
+            background: #f0ebe0;
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 10px;
+        }
+
+        .section-title {
+            color: #333;
+            font-weight: 600;
+            margin-bottom: 10px;
+            font-size: 18px;
+            border-left: 4px solid #333;
+            padding-left: 8px;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-bottom: 10px;
+        }
+
+        .input-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        label {
+            color: #555;
+            margin-bottom: 8px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        input[type="number"], select, input[type="text"] {
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        input[type="number"]:focus, select:focus, input[type="text"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .unit {
+            color: #999;
+            font-size: 12px;
+            margin-top: 4px;
+        }
+
+        #laneCanvas {
+            cursor: crosshair;
+            background: white;
+            border: none;
+            border-radius: 8px;
+            display: block;
+            margin: 10px auto 0;
+            width: 100%;
+            max-width: 500px;
+        }
+
+        .canvas-legend {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin: 10px 0;
+            padding: 0 15px;
+            font-size: 13px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+            border: 2px solid #333;
+        }
+
+        .settings-panel {
+            background: #e8e4dc;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 0 15px 15px 15px;
+            border: 1px solid #d0d0d0;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            margin: 0 5px;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        .btn-save { background: #4CAF50; }
+        .btn-load { background: #2196F3; }
+        .btn-delete { background: #f44336; }
+        .btn-toggle { background: #666; width: 100%; max-width: 300px; }
+
+        input[type="number"].invalid {
+            border: 2px solid #f44336 !important;
+            background-color: #ffebee !important;
+        }
+
+        @media (max-width: 600px) {
+            .container { padding: 15px; }
+            h1 { font-size: 24px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>ボウリング狙い位置計算ツール</h1>
+        <p class="subtitle">立ち位置と既知の狙い位置から、任意の距離での狙い位置を算出</p>
+        
+        <div class="settings-panel">
+            <div style="margin-bottom: 10px;">
+                <label for="settingName" style="display: block; margin-bottom: 5px; font-weight: 600;">設定名：</label>
+                <input type="text" id="settingName" placeholder="現在の設定に名前を付ける" style="width: 100%;">
+            </div>
+            <div style="margin-bottom: 15px;">
+                <label for="settingsList" style="display: block; margin-bottom: 5px; font-weight: 600;">保存した設定：</label>
+                <select id="settingsList" size="3" style="width: 100%;">
+                    <option value="" disabled>設定がありません</option>
+                </select>
+            </div>
+            <div style="text-align: center; display: flex; justify-content: center; gap: 10px;">
+                <button id="btnSave" class="btn btn-save">保存</button>
+                <button id="btnLoad" class="btn btn-load">読込</button>
+                <button id="btnDelete" class="btn btn-delete">削除</button>
+            </div>
+        </div>
+
+        <div class="visual-interface">
+            <canvas id="laneCanvas"></canvas>
+        </div>
+
+        <div class="canvas-legend">
+            <div class="legend-item">
+                <div class="legend-color" style="background: #ff6b6b; border-radius: 50%;"></div>
+                <span>立ち位置（ダブルクリックで移動モード変更）</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #f0e6d2; border: 2px solid #000; border-radius: 50%;"></div>
+                <span>スタート位置</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #ffd93d; border-radius: 50%;"></div>
+                <span>既知の狙い位置（ダブルクリックで移動モード変更）</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #6bcf7f; border-radius: 50%;"></div>
+                <span>計算する狙い位置</span>
+            </div>
+        </div>
+
+        <div style="text-align: center; margin: 15px 0;">
+            <button id="toggleDetails" class="btn btn-toggle">詳細設定を表示 ▼</button>
+        </div>
+
+        <div class="input-sections" id="inputSections" style="display: none;">
+
+        <div class="input-section">
+            <div class="section-title">投球タイプ</div>
+            <div class="input-group">
+                <div class="input-item">
+                    <label for="throwingHand">投球タイプ</label>
+                    <select id="throwingHand">
+                        <option value="right">右投げ</option>
+                        <option value="left">左投げ</option>
+                    </select>
+                    <span class="unit">ボール位置の計算方向が変わります</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="input-section">
+            <div class="section-title">立ち位置</div>
+            <div class="input-group">
+                <div class="input-item">
+                    <label for="stanceMode">移動モード</label>
+                    <select id="stanceMode">
+                        <option value="fixed">固定</option>
+                        <option value="vertical">前後のみ</option>
+                        <option value="horizontal" selected>横のみ</option>
+                        <option value="free">自由移動</option>
+                    </select>
+                </div>
+                <div class="input-item">
+                    <label for="stancePos">位置（ボード番号）</label>
+                    <input type="number" id="stancePos" value="30" step="0.5">
+                    <span class="unit">レーンの横方向位置（枚目）</span>
+                </div>
+            </div>
+            <div class="input-group">
+                <div class="input-item">
+                    <label for="stanceToFoulLine">距離（m）</label>
+                    <input type="number" id="stanceToFoulLine" value="3.048" step="0.1">
+                    <span class="unit">ファウルラインまでの距離</span>
+                </div>
+                <div class="input-item">
+                    <label for="stanceToBall">立ち位置とボールとの距離（ボード）</label>
+                    <input type="number" id="stanceToBall" value="9" step="0.5">
+                    <span class="unit">横方向の距離（デフォルト9枚）</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="input-section">
+            <div class="section-title">既知の狙い位置</div>
+            <div class="input-group">
+                <div class="input-item">
+                    <label for="target0Mode">移動モード</label>
+                    <select id="target0Mode">
+                        <option value="fixed">固定</option>
+                        <option value="vertical">前後のみ</option>
+                        <option value="horizontal">横のみ</option>
+                        <option value="free" selected>自由移動</option>
+                    </select>
+                </div>
+                <div class="input-item">
+                    <label for="knownDistance">距離（フィート）</label>
+                    <input type="number" id="knownDistance" value="43" step="1">
+                    <span class="unit">ファウルラインからの距離</span>
+                </div>
+            </div>
+            <div class="input-group">
+                <div class="input-item">
+                    <label for="knownTarget">通過位置（ボード番号）</label>
+                    <input type="number" id="knownTarget" value="7" step="0.5">
+                    <span class="unit">この距離での横位置（枚目）</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="input-section">
+            <div class="section-title">計算する狙い位置（1つ目）</div>
+            <div class="input-group">
+                <div class="input-item">
+                    <label for="target1Visible">表示</label>
+                    <select id="target1Visible">
+                        <option value="true" selected>表示</option>
+                        <option value="false">非表示</option>
+                    </select>
+                </div>
+                <div class="input-item">
+                    <label for="target1Distance">距離（フィート）</label>
+                    <input type="number" id="target1Distance" value="15" step="1">
+                    <span class="unit">ファウルラインからの距離</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="input-section">
+            <div class="section-title">計算する狙い位置（2つ目）</div>
+            <div class="input-group">
+                <div class="input-item">
+                    <label for="target2Visible">表示</label>
+                    <select id="target2Visible">
+                        <option value="true" selected>表示</option>
+                        <option value="false">非表示</option>
+                    </select>
+                </div>
+                <div class="input-item">
+                    <label for="target2Distance">距離（フィート）</label>
+                    <input type="number" id="target2Distance" value="60" step="1">
+                    <span class="unit">ファウルラインからの距離</span>
+                </div>
+            </div>
+        </div>
+
+        </div>
+
+    <script>
+        const canvas = document.getElementById('laneCanvas');
+        const ctx = canvas.getContext('2d');
+        let isDragging = false;
+        let dragTarget = null;
+        let dragResultIndex = -1;
+        
+        let pointModes = {
+            stance: 'horizontal',
+            target0: 'fixed',
+            target1: 'vertical',
+            target2: 'vertical'
+        };
+
+        function resizeCanvas() {
+            canvas.width = 500;
+            canvas.height = 800;
+            
+            const container = canvas.parentElement;
+            const containerWidth = container.getBoundingClientRect().width;
+            const displayWidth = Math.min(containerWidth, 500); 
+            const displayHeight = displayWidth * (800 / 500); 
+            
+            canvas.style.width = displayWidth + 'px';
+            canvas.style.height = displayHeight + 'px';
+            
+            drawLane();
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        function loadSettingsList(selectedIndexToRestore = null) {
+            const settingsList = document.getElementById('settingsList');
+            const saved = localStorage.getItem('bowlingSettingsList');
+            
+            settingsList.innerHTML = '';
+            
+            if (!saved) {
+                const option = document.createElement('option');
+                option.value = '';
+                option.disabled = true;
+                option.selected = true;
+                option.textContent = '設定がありません';
+                settingsList.appendChild(option);
+                return;
+            }
+            
+            try {
+                const list = JSON.parse(saved);
+                if (list.length === 0) {
+                    const option = document.createElement('option');
+                    option.value = '';
+                    option.disabled = true;
+                    option.selected = true;
+                    option.textContent = '設定がありません';
+                    settingsList.appendChild(option);
+                    return;
+                }
+                
+                list.forEach((item, index) => {
+                    const option = document.createElement('option');
+                    option.value = index;
+                    option.textContent = item.name;
+                    settingsList.appendChild(option);
+                });
+
+                if (selectedIndexToRestore !== null && selectedIndexToRestore < list.length) {
+                    settingsList.value = selectedIndexToRestore;
+                }
+
+            } catch (e) {
+                console.error("List load error", e);
+            }
+        }
+
+        function executeSave() {
+            const settingName = document.getElementById('settingName').value.trim();
+            
+            if (!settingName) {
+                alert('設定名を入力してください');
+                return;
+            }
+            
+            const settings = {
+                name: settingName,
+                data: {
+                    throwingHand: document.getElementById('throwingHand').value,
+                    stancePos: document.getElementById('stancePos').value,
+                    stanceToFoulLine: document.getElementById('stanceToFoulLine').value,
+                    stanceToBall: document.getElementById('stanceToBall').value,
+                    stanceMode: document.getElementById('stanceMode').value,
+                    knownDistance: document.getElementById('knownDistance').value,
+                    knownTarget: document.getElementById('knownTarget').value,
+                    target0Mode: document.getElementById('target0Mode').value,
+                    target1Visible: document.getElementById('target1Visible').value,
+                    target1Distance: document.getElementById('target1Distance').value,
+                    target2Visible: document.getElementById('target2Visible').value,
+                    target2Distance: document.getElementById('target2Distance').value
+                }
+            };
+            
+            const saved = localStorage.getItem('bowlingSettingsList');
+            let list = [];
+            
+            if (saved) {
+                try {
+                    list = JSON.parse(saved);
+                } catch (e) {
+                    list = [];
+                }
+            }
+            
+            list.push(settings);
+            localStorage.setItem('bowlingSettingsList', JSON.stringify(list));
+            
+            document.getElementById('settingName').value = '';
+            
+            loadSettingsList(list.length - 1);
+            
+            alert('設定を保存しました');
+        }
+
+        function executeLoad() {
+            const settingsList = document.getElementById('settingsList');
+            
+            if (settingsList.selectedIndex < 0 || settingsList.value === '') {
+                alert('読み込む設定を選択してください');
+                return;
+            }
+            
+            const saved = localStorage.getItem('bowlingSettingsList');
+            if (!saved) return;
+            
+            try {
+                const list = JSON.parse(saved);
+                const index = parseInt(settingsList.value);
+                const settings = list[index].data;
+                
+                document.getElementById('throwingHand').value = settings.throwingHand || 'right';
+                document.getElementById('stancePos').value = settings.stancePos || '30';
+                document.getElementById('stanceToFoulLine').value = settings.stanceToFoulLine || '3.048';
+                document.getElementById('stanceToBall').value = settings.stanceToBall || '9';
+                document.getElementById('stanceMode').value = settings.stanceMode || 'horizontal';
+                document.getElementById('knownDistance').value = settings.knownDistance || '43';
+                document.getElementById('knownTarget').value = settings.knownTarget || '7';
+                document.getElementById('target0Mode').value = settings.target0Mode || 'free';
+                document.getElementById('target1Visible').value = settings.target1Visible || 'true';
+                document.getElementById('target1Distance').value = settings.target1Distance || '15';
+                document.getElementById('target2Visible').value = settings.target2Visible || 'true';
+                document.getElementById('target2Distance').value = settings.target2Distance || '60';
+                
+                calculate();
+                alert('設定を読み込みました');
+            } catch (e) {
+                alert('設定の読み込みに失敗しました');
+            }
+        }
+
+        function executeDelete() {
+            const settingsList = document.getElementById('settingsList');
+            
+            if (settingsList.selectedIndex < 0 || settingsList.value === '') {
+                alert('削除する設定を選択してください');
+                return;
+            }
+            
+            const saved = localStorage.getItem('bowlingSettingsList');
+            if (!saved) return;
+            
+            try {
+                const list = JSON.parse(saved);
+                const index = parseInt(settingsList.value);
+                
+                if (index < 0 || index >= list.length) {
+                    alert('無効な設定が選択されています');
+                    return;
+                }
+                
+                const settingName = list[index].name;
+                
+                if (!confirm(`「${settingName}」を削除しますか？`)) {
+                    return;
+                }
+                
+                list.splice(index, 1);
+                
+                localStorage.setItem('bowlingSettingsList', JSON.stringify(list));
+                
+                loadSettingsList();
+                
+                alert('設定を削除しました');
+            } catch (e) {
+                alert('削除中にエラーが発生しました: ' + e.message);
+            }
+        }
+
+        document.getElementById('btnSave').addEventListener('click', executeSave);
+        document.getElementById('btnLoad').addEventListener('click', executeLoad);
+        document.getElementById('btnDelete').addEventListener('click', executeDelete);
+        
+        document.getElementById('toggleDetails').addEventListener('click', function() {
+            const details = document.getElementById('inputSections');
+            const button = this;
+            
+            if (details.style.display === 'none') {
+                details.style.display = 'block';
+                button.textContent = '詳細設定を非表示 ▲';
+                button.style.background = '#888';
+            } else {
+                details.style.display = 'none';
+                button.textContent = '詳細設定を表示 ▼';
+                button.style.background = '#666';
+            }
+        });
+
+        loadSettingsList();
+
+        function drawLane() {
+            const width = canvas.width;
+            const height = canvas.height;
+            ctx.clearRect(0, 0, width, height);
+            
+            const throwingHand = document.getElementById('throwingHand').value;
+            const stancePos = parseFloat(document.getElementById('stancePos').value) || 20;
+            const stanceToFoulLineM = parseFloat(document.getElementById('stanceToFoulLine').value) || 4.5;
+            const stanceToBall = parseFloat(document.getElementById('stanceToBall').value) || 9;
+            const knownDistance = parseFloat(document.getElementById('knownDistance').value) || 45;
+            const knownTarget = parseFloat(document.getElementById('knownTarget').value) || 10;
+            const targetDistance = parseFloat(document.getElementById('target2Distance').value) || 60;
+            
+            const stanceToFoulLineFt = stanceToFoulLineM * 3.28084;
+            const ballStartBoard = stancePos - stanceToBall;
+            const ballStartDistance = -stanceToFoulLineFt;
+            
+            const maxDistance = 62.6;
+            const minDistance = -30;
+            const totalDistance = maxDistance - minDistance;
+            
+            const boardWidth = 60; 
+            const padding = 40;
+            const laneWidth = width - 2 * padding;
+            const laneHeight = height - 2 * padding;
+            
+            const scaleX = (board) => {
+                if (throwingHand === 'right') {
+                    return padding + ((50 - board) / boardWidth) * laneWidth;
+                } else {
+                    return padding + ((board + 10) / boardWidth) * laneWidth;
+                }
+            };
+            const scaleY = (dist) => (height - padding) - ((dist - minDistance) / totalDistance) * laneHeight;
+            
+            ctx.fillStyle = '#f0e6d2';
+            ctx.fillRect(padding, padding, laneWidth, laneHeight);
+            
+            const foulLineY = scaleY(0);
+            ctx.fillStyle = 'rgba(210, 180, 140, 0.4)';
+            
+            if (throwingHand === 'right') {
+                const leftGutterRight = scaleX(40);
+                const leftGutterLeft = scaleX(50);
+                ctx.fillRect(leftGutterLeft, padding, leftGutterRight - leftGutterLeft, foulLineY - padding);
+                const rightGutterLeft = scaleX(0);
+                const rightGutterRight = scaleX(-10);
+                ctx.fillRect(rightGutterLeft, padding, rightGutterRight - rightGutterLeft, foulLineY - padding);
+            } else {
+                const leftGutterLeft = scaleX(-10);
+                const leftGutterRight = scaleX(0);
+                ctx.fillRect(leftGutterLeft, padding, leftGutterRight - leftGutterLeft, foulLineY - padding);
+                const rightGutterLeft = scaleX(40);
+                const rightGutterRight = scaleX(50);
+                ctx.fillRect(rightGutterLeft, padding, rightGutterRight - rightGutterLeft, foulLineY - padding);
+            }
+            
+            for (let i = -10; i <= 50; i += 5) {
+                const x = scaleX(i);
+                if (i === 0 && throwingHand === 'left') {
+                    ctx.strokeStyle = '#e8e8e8';
+                    ctx.lineWidth = 0.5;
+                } else {
+                    ctx.strokeStyle = '#d0d0d0';
+                    ctx.lineWidth = 1;
+                }
+                ctx.beginPath();
+                ctx.moveTo(x, padding);
+                ctx.lineTo(x, height - padding);
+                ctx.stroke();
+                
+                if (i >= 0) {
+                    ctx.fillStyle = '#999';
+                    ctx.font = '10px sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(i, x, height - padding + 15);
+                }
+            }
+            ctx.textAlign = 'left';
+            
+            ctx.strokeStyle = '#e0e0e0';
+            ctx.fillStyle = '#999';
+            const labelX = scaleX(-10) + 10;
+            for (let d = -15; d <= maxDistance; d += 5) {
+                const y = scaleY(d);
+                ctx.beginPath();
+                ctx.moveTo(padding, y);
+                ctx.lineTo(width - padding, y);
+                ctx.stroke();
+                ctx.fillText(d + 'ft', labelX, y + 3);
+            }
+            
+            ctx.strokeStyle = '#ff0000';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(padding, foulLineY);
+            ctx.lineTo(width - padding, foulLineY);
+            ctx.stroke();
+            ctx.fillStyle = '#ff0000';
+            ctx.font = 'bold 12px sans-serif';
+            ctx.fillText('ファウルライン', padding + 5, foulLineY + 15);
+            
+            ctx.fillStyle = '#444';
+            const spotData = [
+                { board: 5, distance: 13.5 }, { board: 10, distance: 14.25 }, { board: 15, distance: 15 },
+                { board: 20, distance: 15.5 }, { board: 25, distance: 15 }, { board: 30, distance: 14.25 },
+                { board: 35, distance: 13.5 }
+            ];
+            spotData.forEach(spot => {
+                const spotX = scaleX(spot.board);
+                const spotsY = scaleY(spot.distance);
+                ctx.beginPath();
+                ctx.moveTo(spotX, spotsY - 8);
+                ctx.lineTo(spotX - 5, spotsY + 2);
+                ctx.lineTo(spotX + 5, spotsY + 2);
+                ctx.closePath();
+                ctx.fill();
+            });
+            
+            ctx.strokeStyle = '#666';
+            ctx.lineWidth = 2;
+            const downlaneMarkers = [
+                { board: 10, startDist: 40, endDist: 43 }, { board: 15, startDist: 34, endDist: 37 },
+                { board: 25, startDist: 34, endDist: 37 }, { board: 30, startDist: 40, endDist: 43 }
+            ];
+            downlaneMarkers.forEach(marker => {
+                const markerX = scaleX(marker.board);
+                const startY = scaleY(marker.startDist);
+                const endY = scaleY(marker.endDist);
+                ctx.beginPath();
+                ctx.moveTo(markerX, startY);
+                ctx.lineTo(markerX, endY);
+                ctx.stroke();
+            });
+            
+            const pinPositions = [
+                { board: 20, distance: 60 }, { board: 25.5, distance: 60.71 }, { board: 14.5, distance: 60.71 },
+                { board: 31, distance: 61.42 }, { board: 20, distance: 61.42 }, { board: 9, distance: 61.42 },
+                { board: 36.5, distance: 62.13 }, { board: 25.5, distance: 62.13 }, { board: 14.5, distance: 62.13 },
+                { board: 3.5, distance: 62.13 }
+            ];
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 2;
+            pinPositions.forEach(pin => {
+                const px = scaleX(pin.board);
+                const py = scaleY(pin.distance);
+                ctx.beginPath();
+                ctx.arc(px, py, 6, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+            });
+            
+            const firstTargetDist = Math.min(parseFloat(document.getElementById('knownDistance').value) || 43, 60);
+            const firstTargetBoard = parseFloat(document.getElementById('knownTarget').value) || 7;
+            
+            ctx.strokeStyle = '#667eea';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            ctx.moveTo(scaleX(ballStartBoard), scaleY(ballStartDistance));
+            ctx.lineTo(scaleX(firstTargetBoard), scaleY(firstTargetDist));
+            const slope = (firstTargetBoard - ballStartBoard) / (firstTargetDist - ballStartDistance);
+            const board60 = ballStartBoard + slope * (60 - ballStartDistance);
+            ctx.lineTo(scaleX(board60), scaleY(60));
+            ctx.stroke();
+            ctx.setLineDash([]);
+            
+            const stanceModeElement = document.getElementById('stanceMode');
+            const stanceMode = stanceModeElement ? stanceModeElement.value : 'horizontal';
+            
+            const points = [
+                { x: stancePos, y: ballStartDistance, color: '#ff6b6b', label: '立ち位置', size: 12, draggable: true, showLabel: true, pointId: 'stance', mode: stanceMode },
+                { x: ballStartBoard, y: ballStartDistance, color: '#4ecdc4', fillColor: '#f0e6d2', label: 'スタート', size: 10, draggable: false, showLabel: false }
+            ];
+            
+            const colors = ['#ffd93d', '#6bcf7f', '#6bcf7f'];
+            for (let i = 0; i < 3; i++) {
+                let isVisible = true;
+                if (i >= 1) {
+                    const visibleElement = document.getElementById(`target${i}Visible`);
+                    isVisible = visibleElement ? visibleElement.value === 'true' : true;
+                }
+                if (!isVisible) continue;
+                
+                let targetMode;
+                if (i >= 1) {
+                    targetMode = 'vertical';
+                } else {
+                    const targetModeElement = document.getElementById(`target${i}Mode`);
+                    targetMode = targetModeElement ? targetModeElement.value : 'vertical';
+                }
+                
+                let distance, board;
+                if (i === 0) {
+                    distance = Math.min(parseFloat(document.getElementById('knownDistance').value) || 43, 60);
+                    board = parseFloat(document.getElementById('knownTarget').value) || 7;
+                } else {
+                    const targetDistInput = document.getElementById(`target${i}Distance`);
+                    if (targetDistInput) {
+                        distance = Math.min(parseFloat(targetDistInput.value) || (i === 1 ? 15 : 60), 60);
+                    } else {
+                        distance = i === 1 ? 15 : 60;
+                    }
+                    const firstTargetDist = Math.min(parseFloat(document.getElementById('knownDistance').value) || 43, 60);
+                    const firstTargetBoard = parseFloat(document.getElementById('knownTarget').value) || 7;
+                    const slope = (firstTargetBoard - ballStartBoard) / (firstTargetDist - ballStartDistance);
+                    board = ballStartBoard + slope * (distance - ballStartDistance);
+                }
+                
+                points.push({
+                    x: board,
+                    y: distance,
+                    color: colors[i],
+                    label: `狙い${i + 1}`,
+                    size: 12,
+                    draggable: true,
+                    showLabel: true,
+                    pointId: `target${i}`,
+                    mode: targetMode
+                });
+            }
+        
+            points.forEach(point => {
+                const px = scaleX(point.x);
+                const py = scaleY(point.y);
+                let pointMode = point.mode;
+                if (!pointMode && point.pointId === 'stance') {
+                    const stanceModeElement = document.getElementById('stanceMode');
+                    pointMode = stanceModeElement ? stanceModeElement.value : 'horizontal';
+                }
+                
+                const baseColor = point.fillColor || point.color;
+                ctx.strokeStyle = '#000';
+                ctx.lineWidth = 2;
+                
+                if (pointMode === 'fixed') {
+                    const size = point.size;
+                    ctx.fillStyle = baseColor.includes('rgb') ? baseColor.replace(')', ', 0.5)').replace('rgb', 'rgba') : baseColor + '80';
+                    ctx.fillRect(px - size, py - size, size * 2, size * 2);
+                    ctx.strokeRect(px - size, py - size, size * 2, size * 2);
+                } else {
+                    const circleSize = point.size;
+                    ctx.fillStyle = baseColor.includes('rgb') ? baseColor.replace(')', ', 0.5)').replace('rgb', 'rgba') : baseColor + '80';
+                    ctx.beginPath();
+                    ctx.arc(px, py, circleSize, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.stroke();
+                    
+                    if (pointMode && pointMode !== 'fixed' && point.draggable) {
+                        const arrowSize = 12.5;
+                        const arrowDist = circleSize + 8;
+                        if (pointMode === 'vertical' || pointMode === 'free') {
+                            ctx.fillStyle = point.color;
+                            ctx.strokeStyle = '#000';
+                            ctx.lineWidth = 1.5;
+                            ctx.beginPath();
+                            ctx.moveTo(px, py - arrowDist - arrowSize);
+                            ctx.lineTo(px - arrowSize/2, py - arrowDist);
+                            ctx.lineTo(px + arrowSize/2, py - arrowDist);
+                            ctx.closePath();
+                            ctx.fill();
+                            ctx.stroke();
+                            ctx.beginPath();
+                            ctx.moveTo(px, py + arrowDist + arrowSize);
+                            ctx.lineTo(px - arrowSize/2, py + arrowDist);
+                            ctx.lineTo(px + arrowSize/2, py + arrowDist);
+                            ctx.closePath();
+                            ctx.fill();
+                            ctx.stroke();
+                        }
+                        if (pointMode === 'horizontal' || pointMode === 'free') {
+                            ctx.fillStyle = point.color;
+                            ctx.strokeStyle = '#000';
+                            ctx.lineWidth = 1.5;
+                            ctx.beginPath();
+                            ctx.moveTo(px - arrowDist - arrowSize, py);
+                            ctx.lineTo(px - arrowDist, py - arrowSize/2);
+                            ctx.lineTo(px - arrowDist, py + arrowSize/2);
+                            ctx.closePath();
+                            ctx.fill();
+                            ctx.stroke();
+                            ctx.beginPath();
+                            ctx.moveTo(px + arrowDist + arrowSize, py);
+                            ctx.lineTo(px + arrowDist, py - arrowSize/2);
+                            ctx.lineTo(px + arrowDist, py + arrowSize/2);
+                            ctx.closePath();
+                            ctx.fill();
+                            ctx.stroke();
+                        }
+                    }
+                }
+                
+                if (point.showLabel) {
+                    if (point.label === '立ち位置') {
+                        const distFt = Math.abs(point.y).toFixed(1);
+                        const distM = (Math.abs(point.y) / 3.28084).toFixed(2);
+                        const labelStartY = py + point.size + 15;
+                        const labelCenterX = px - 35;
+                        ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+                        const bgPadding = 4;
+                        const lineHeight = 18;
+                        const bgWidth = 80;
+                        const bgHeight = lineHeight * 3 + bgPadding * 2;
+                        ctx.fillRect(labelCenterX - bgPadding, labelStartY - bgPadding, bgWidth, bgHeight);
+                        ctx.fillStyle = '#333';
+                        ctx.font = 'bold 15px sans-serif';
+                        ctx.fillText(`${distFt}ft`, labelCenterX, labelStartY + 12);
+                        ctx.fillText(`(${distM}m)`, labelCenterX, labelStartY + 30);
+                        ctx.fillText(point.x.toFixed(1) + '枚', labelCenterX, labelStartY + 48);
+                    } else {
+                        const labelX = point.x > 20 ? px - 90 : px + 30;
+                        const distText = Math.abs(point.y).toFixed(1) + 'ft';
+                        ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+                        const bgPadding = 4;
+                        const lineHeight = 18;
+                        const bgWidth = 70;
+                        const bgHeight = lineHeight * 2 + bgPadding * 2;
+                        const bgY = py + 5 - lineHeight / 2 - bgPadding;
+                        ctx.fillRect(labelX - bgPadding, bgY, bgWidth, bgHeight);
+                        ctx.fillStyle = '#333';
+                        ctx.font = 'bold 15px sans-serif';
+                        ctx.fillText(distText, labelX, py + 5);
+                        ctx.fillText(point.x.toFixed(1) + '枚', labelX, py + 23);
+                    }
+                }
+            });
+            
+            const stancePoint = points.find(p => p.pointId === 'stance');
+            const targetPoints = points.filter(p => p.pointId && p.pointId.startsWith('target'));
+            
+            canvas.points = {
+                stance: stancePoint ? { 
+                    x: scaleX(stancePoint.x), 
+                    y: scaleY(stancePoint.y), 
+                    board: stancePoint.x,
+                    distance: stancePoint.y,
+                    mode: stancePoint.mode,
+                    pointId: 'stance'
+                } : null,
+                targets: targetPoints.map(tp => ({
+                    x: scaleX(tp.x),
+                    y: scaleY(tp.y),
+                    board: tp.x,
+                    distance: tp.y,
+                    mode: tp.mode,
+                    pointId: tp.pointId
+                }))
+            };
+        }
+
+        canvas.addEventListener('mousedown', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const scaleX_ratio = canvas.width / rect.width;
+            const scaleY_ratio = canvas.height / rect.height;
+            const mouseX = (e.clientX - rect.left) * scaleX_ratio;
+            const mouseY = (e.clientY - rect.top) * scaleY_ratio;
+            
+            if (canvas.points) {
+                const hitDistance = 20;
+                let hitDetected = false;
+                
+                if (canvas.points.stance && canvas.points.stance.mode !== 'fixed') {
+                    const stanceDistance = Math.hypot(mouseX - canvas.points.stance.x, mouseY - canvas.points.stance.y);
+                    if (stanceDistance < hitDistance) {
+                        isDragging = true;
+                        dragTarget = 'stance';
+                        canvas.style.cursor = 'grabbing';
+                        hitDetected = true;
+                    }
+                }
+                
+                if (!hitDetected && canvas.points.targets) {
+                    for (let i = 0; i < canvas.points.targets.length; i++) {
+                        const target = canvas.points.targets[i];
+                        if (target.mode === 'fixed') continue;
+                        const targetDistance = Math.hypot(mouseX - target.x, mouseY - target.y);
+                        if (targetDistance < hitDistance) {
+                            isDragging = true;
+                            dragTarget = 'target';
+                            dragResultIndex = i;
+                            canvas.style.cursor = 'grabbing';
+                            hitDetected = true;
+                            break;
+                        }
+                    }
+                }
+            }
+        });
+
+        canvas.addEventListener('mouseup', () => {
+            isDragging = false;
+            dragTarget = null;
+            dragResultIndex = -1;
+            canvas.style.cursor = 'crosshair';
+        });
+
+        canvas.addEventListener('dblclick', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const scaleX_ratio = canvas.width / rect.width;
+            const scaleY_ratio = canvas.height / rect.height;
+            const mouseX = (e.clientX - rect.left) * scaleX_ratio;
+            const mouseY = (e.clientY - rect.top) * scaleY_ratio;
+            
+            if (canvas.points) {
+                const hitDistance = 20;
+                if (canvas.points.stance) {
+                    const stanceDistance = Math.hypot(mouseX - canvas.points.stance.x, mouseY - canvas.points.stance.y);
+                    if (stanceDistance < hitDistance) {
+                        cycleModeForPoint('stanceMode');
+                        return;
+                    }
+                }
+                if (canvas.points.targets) {
+                    for (let i = 0; i < canvas.points.targets.length; i++) {
+                        const target = canvas.points.targets[i];
+                        const targetDistance = Math.hypot(mouseX - target.x, mouseY - target.y);
+                        if (targetDistance < hitDistance) {
+                            cycleModeForPoint(`target${i}Mode`);
+                            return;
+                        }
+                    }
+                }
+            }
+        });
+
+        canvas.addEventListener('click', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const scaleX_ratio = canvas.width / rect.width;
+            const scaleY_ratio = canvas.height / rect.height;
+            const mouseX = (e.clientX - rect.left) * scaleX_ratio;
+            const mouseY = (e.clientY - rect.top) * scaleY_ratio;
+            
+            if (canvas.points) {
+                if (canvas.points.stance) {
+                    const result = checkArrowClick(mouseX, mouseY, canvas.points.stance, 'stance');
+                    if (result) return;
+                }
+                if (canvas.points.targets) {
+                    for (let i = 0; i < canvas.points.targets.length; i++) {
+                        const target = canvas.points.targets[i];
+                        const result = checkArrowClick(mouseX, mouseY, target, `target${i}`);
+                        if (result) return;
+                    }
+                }
+            }
+        });
+
+        function checkArrowClick(mouseX, mouseY, point, pointId) {
+            const arrowSize = 12.5;
+            const arrowDist = 12 + 8;
+            const hitSize = 15;
+            const mode = point.mode;
+            if (!mode || mode === 'fixed') return false;
+            
+            if (mode === 'vertical' || mode === 'free') {
+                const upArrowY = point.y - arrowDist - arrowSize;
+                if (Math.hypot(mouseX - point.x, mouseY - upArrowY) < hitSize) {
+                    adjustPointValue(pointId, 'vertical', 1);
+                    return true;
+                }
+                const downArrowY = point.y + arrowDist + arrowSize;
+                if (Math.hypot(mouseX - point.x, mouseY - downArrowY) < hitSize) {
+                    adjustPointValue(pointId, 'vertical', -1);
+                    return true;
+                }
+            }
+            
+            if (mode === 'horizontal' || mode === 'free') {
+                const leftArrowX = point.x - arrowDist - arrowSize;
+                if (Math.hypot(mouseX - leftArrowX, mouseY - point.y) < hitSize) {
+                    adjustPointValue(pointId, 'horizontal', -1);
+                    return true;
+                }
+                const rightArrowX = point.x + arrowDist + arrowSize;
+                if (Math.hypot(mouseX - rightArrowX, mouseY - point.y) < hitSize) {
+                    adjustPointValue(pointId, 'horizontal', 1);
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        function adjustPointValue(pointId, direction, delta) {
+            if (pointId === 'stance') {
+                if (direction === 'vertical') {
+                    const currentM = parseFloat(document.getElementById('stanceToFoulLine').value) || 3.048;
+                    const currentFt = currentM * 3.28084;
+                    const newFt = currentFt - delta;
+                    const newM = newFt / 3.28084;
+                    if (newM > 0 && newM < 10) {
+                        document.getElementById('stanceToFoulLine').value = newM.toFixed(3);
+                        calculate();
+                    }
+                } else if (direction === 'horizontal') {
+                    const current = parseFloat(document.getElementById('stancePos').value) || 30;
+                    const newValue = current - (delta * 0.5);
+                    if (newValue >= -10 && newValue <= 50) {
+                        document.getElementById('stancePos').value = newValue.toFixed(1);
+                        calculate();
+                    }
+                }
+            } else if (pointId === 'target0') {
+                if (direction === 'vertical') {
+                    const current = parseFloat(document.getElementById('knownDistance').value) || 43;
+                    const newValue = current + delta;
+                    if (newValue >= 0 && newValue <= 60) {
+                        document.getElementById('knownDistance').value = newValue.toFixed(1);
+                        calculate();
+                    }
+                } else if (direction === 'horizontal') {
+                    const current = parseFloat(document.getElementById('knownTarget').value) || 7;
+                    const newValue = current - (delta * 0.5);
+                    if (newValue >= -10 && newValue <= 50) {
+                        document.getElementById('knownTarget').value = newValue.toFixed(1);
+                        calculate();
+                    }
+                }
+            } else if (pointId === 'target1' || pointId === 'target2') {
+                if (direction === 'vertical') {
+                    const inputId = pointId === 'target1' ? 'target1Distance' : 'target2Distance';
+                    const current = parseFloat(document.getElementById(inputId).value) || 15;
+                    const newValue = current + delta;
+                    if (newValue >= 0 && newValue <= 60) {
+                        document.getElementById(inputId).value = newValue.toFixed(1);
+                        calculate();
+                    }
+                }
+            }
+        }
+
+        function cycleModeForPoint(selectorId) {
+            const selector = document.getElementById(selectorId);
+            if (!selector) return;
+            const modes = ['fixed', 'vertical', 'horizontal', 'free'];
+            const currentIndex = modes.indexOf(selector.value);
+            const nextIndex = (currentIndex + 1) % modes.length;
+            selector.value = modes[nextIndex];
+            selector.dispatchEvent(new Event('change'));
+        }
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (!isDragging) {
+                const rect = canvas.getBoundingClientRect();
+                const scaleX_ratio = canvas.width / rect.width;
+                const scaleY_ratio = canvas.height / rect.height;
+                const mouseX = (e.clientX - rect.left) * scaleX_ratio;
+                const mouseY = (e.clientY - rect.top) * scaleY_ratio;
+
+                if (canvas.points) {
+                    const hitDistance = 20;
+                    let isOverDraggable = false;
+                    
+                    if (canvas.points.stance && canvas.points.stance.mode !== 'fixed') {
+                        if (Math.hypot(mouseX - canvas.points.stance.x, mouseY - canvas.points.stance.y) < hitDistance) {
+                            isOverDraggable = true;
+                        }
+                    }
+                    if (canvas.points.targets) {
+                        for (const target of canvas.points.targets) {
+                            if (target.mode !== 'fixed') {
+                                if (Math.hypot(mouseX - target.x, mouseY - target.y) < hitDistance) {
+                                    isOverDraggable = true;
+                                }
+                            }
+                        }
+                    }
+                    canvas.style.cursor = isOverDraggable ? 'grab' : 'crosshair';
+                }
+                return;
+            }
+            
+            const rect = canvas.getBoundingClientRect();
+            const scaleX_ratio = canvas.width / rect.width;
+            const scaleY_ratio = canvas.height / rect.height;
+            const x = (e.clientX - rect.left) * scaleX_ratio;
+            const y = (e.clientY - rect.top) * scaleY_ratio;
+            
+            const throwingHand = document.getElementById('throwingHand').value;
+            const padding = 40;
+            const laneWidth = canvas.width - 2 * padding;
+            const laneHeight = canvas.height - 2 * padding;
+            const boardWidth = 60;
+            
+            if (dragTarget === 'stance' && canvas.points.stance) {
+                const mode = canvas.points.stance.mode;
+                if (mode === 'horizontal' || mode === 'free') {
+                    let board;
+                    if (throwingHand === 'right') {
+                        board = 50 - ((x - padding) / laneWidth) * boardWidth;
+                    } else {
+                        board = ((x - padding) / laneWidth) * boardWidth - 10;
+                    }
+                    if (board >= -10 && board <= 50) {
+                        document.getElementById('stancePos').value = board.toFixed(1);
+                    }
+                }
+                if (mode === 'vertical' || mode === 'free') {
+                    const maxDistance = 62.6;
+                    const minDistance = -30;
+                    const totalDistance = maxDistance - minDistance;
+                    const distance = maxDistance - ((y - padding) / laneHeight) * totalDistance;
+                    const newStanceDistance = -distance;
+                    const newStanceDistanceM = Math.abs(newStanceDistance) / 3.28084;
+                    if (newStanceDistanceM > 0 && newStanceDistanceM < 6.096) {
+                        document.getElementById('stanceToFoulLine').value = newStanceDistanceM.toFixed(2);
+                    }
+                }
+                calculate();
+            } else if (dragTarget === 'target' && dragResultIndex >= 0) {
+                const targetPoint = canvas.points.targets[dragResultIndex];
+                if (!targetPoint) return;
+                const mode = targetPoint.mode;
+                if (mode === 'horizontal' || mode === 'free') {
+                    let board;
+                    if (throwingHand === 'right') {
+                        board = 50 - ((x - padding) / laneWidth) * boardWidth;
+                    } else {
+                        board = ((x - padding) / laneWidth) * boardWidth - 10;
+                    }
+                    if (board >= -10 && board <= 50) {
+                        if (dragResultIndex === 0) {
+                            document.getElementById('knownTarget').value = board.toFixed(1);
+                        }
+                    }
+                }
+                if (mode === 'vertical' || mode === 'free') {
+                    const maxDistance = 62.6;
+                    const minDistance = -30;
+                    const totalDistance = maxDistance - minDistance;
+                    const distance = maxDistance - ((y - padding) / laneHeight) * totalDistance;
+                    if (distance >= 0 && distance <= 60) {
+                        if (dragResultIndex === 0) {
+                            document.getElementById('knownDistance').value = distance.toFixed(1);
+                        } else {
+                            const targetDistInput = document.getElementById(`target${dragResultIndex}Distance`);
+                            if (targetDistInput) {
+                                targetDistInput.value = distance.toFixed(1);
+                            }
+                        }
+                    }
+                }
+                calculate();
+            }
+        });
+
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            const touch = e.touches[0];
+            const mouseEvent = new MouseEvent('mousedown', {
+                clientX: touch.clientX,
+                clientY: touch.clientY
+            });
+            canvas.dispatchEvent(mouseEvent);
+        });
+
+        canvas.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            const touch = e.touches[0];
+            const mouseEvent = new MouseEvent('mousemove', {
+                clientX: touch.clientX,
+                clientY: touch.clientY
+            });
+            canvas.dispatchEvent(mouseEvent);
+        });
+
+        canvas.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            const mouseEvent = new MouseEvent('mouseup', {});
+            canvas.dispatchEvent(mouseEvent);
+        });
+
+        function calculate() {
+            const throwingHand = document.getElementById('throwingHand').value;
+            const stancePos = parseFloat(document.getElementById('stancePos').value);
+            const stanceToFoulLineM = parseFloat(document.getElementById('stanceToFoulLine').value);
+            const stanceToBall = parseFloat(document.getElementById('stanceToBall').value);
+            const knownDistance = parseFloat(document.getElementById('knownDistance').value);
+            const knownTarget = parseFloat(document.getElementById('knownTarget').value);
+            const targetDistance = parseFloat(document.getElementById('target2Distance').value);
+
+            if (isNaN(stancePos) || isNaN(stanceToFoulLineM) || isNaN(stanceToBall) ||
+                isNaN(knownDistance) || isNaN(knownTarget) || isNaN(targetDistance)) {
+                return;
+            }
+            if (knownDistance <= 0 || targetDistance <= 0 || stanceToFoulLineM <= 0) {
+                return;
+            }
+            drawLane();
+        }
+
+        document.querySelectorAll('input, select').forEach(element => {
+            element.addEventListener('input', calculate);
+            element.addEventListener('change', calculate);
+        });
+        
+        const modeSelectors = ['stanceMode', 'target0Mode', 'target1Mode', 'target2Mode'];
+        modeSelectors.forEach(selectorId => {
+            const selector = document.getElementById(selectorId);
+            if (selector) {
+                selector.addEventListener('change', function() {
+                    if (this.value === 'fixed') {
+                        modeSelectors.forEach(otherId => {
+                            if (otherId !== selectorId) {
+                                const otherSelector = document.getElementById(otherId);
+                                if (otherSelector && otherSelector.value === 'fixed') {
+                                    otherSelector.value = 'vertical';
+                                }
+                            }
+                        });
+                    }
+                    calculate();
+                });
+            }
+        });
+
+        window.addEventListener('DOMContentLoaded', calculate);
+    </script>
+</body>
+</html>
